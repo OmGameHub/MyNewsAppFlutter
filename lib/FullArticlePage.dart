@@ -129,7 +129,7 @@ class _FullArticlePageState extends State<FullArticlePage> {
 
                         // share btn start
                         Container(
-                          height: 228,
+                          height: 232,
                           padding: EdgeInsets.only(right: 8),    
                           alignment: Alignment.bottomRight,                
                           child: Card(
@@ -172,7 +172,7 @@ class _FullArticlePageState extends State<FullArticlePage> {
 
                     // article title start
                     Container(
-                      padding: EdgeInsets.symmetric(horizontal: 8, vertical: 10),
+                      padding: EdgeInsets.symmetric(horizontal: 8),
                       child: Text(
                         articles[index]['news_title'],
                         style: TextStyle(

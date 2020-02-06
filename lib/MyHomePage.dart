@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
+import 'package:mynews/VideoNewsDetails.dart';
 import 'dart:convert';
 import 'dart:io';
 
@@ -21,7 +22,7 @@ class _MyHomePageState extends State<MyHomePage> {
 
   List articles;
   List categorys;
-  List liveNews;
+  List videoNewsList;
 
   int _selectedIndex = 0;
   bool isInternetConn = true;
@@ -47,9 +48,17 @@ class _MyHomePageState extends State<MyHomePage> {
 
         var url = topHeadlinesApi;
         var respones = await http.get(Uri.encodeFull(url));
-        var jsonRespones = json.decode(respones.body);
+        List jsonRespones = json.decode(respones.body); 
 
-        setState(() => articles = jsonRespones);
+        setState(() => this.articles = jsonRespones
+          .where((article) => article['video_url'].isEmpty )
+          .toList()
+        );
+
+        setState(() => this.videoNewsList = jsonRespones
+          .where((article) => article['video_url'].isNotEmpty )
+          .toList()
+        );
       }
       else
       {
@@ -105,6 +114,16 @@ class _MyHomePageState extends State<MyHomePage> {
     );
   }
 
+  void openVideoNewsDetails(videoNews) 
+  {
+    Navigator.push(
+      context, 
+      MaterialPageRoute(
+        builder: (BuildContext context) => VideoNewsDetails(videoNews)
+      )
+    );
+  }
+
   Future _onTapCategory(String catId) async
   {
     setState(() {
@@ -156,10 +175,68 @@ class _MyHomePageState extends State<MyHomePage> {
 
     setState(() => this.isCategoryLoading = false);
   }
-
   
-  // article list item start
-  Widget article(int index) => 
+  // video news article list item start
+  Widget videoNewsItem(article, onTap) => 
+  Card(
+    shape: RoundedRectangleBorder(
+      borderRadius: BorderRadius.circular(10),
+    ),
+    child: InkWell(
+      child: Column(
+        children: <Widget>[
+          Stack(
+            children: <Widget>[
+
+              ClipRRect(
+                borderRadius: BorderRadius.circular(10),
+                child: Container(
+                  height: 180,
+                  width: double.infinity,
+                  color: Color(0xFFEAF0F1),
+                  alignment: Alignment.center,
+                  child: Image.network(
+                    imageLink + article['news_image'] ,
+                    loadingBuilder: (context, child, progress) => 
+                    progress == null? 
+                    child : 
+                    Center(
+                      child: CircularProgressIndicator()
+                    ),
+                    height: 180,
+                    width: double.infinity,
+                    fit: BoxFit.cover,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          // article image end  
+
+          // article title start
+          Container(
+            width: double.infinity,
+            padding: EdgeInsets.all(10),
+            child: Text(
+              article['news_title'],
+              softWrap: true,
+              style: TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ),
+          // article title end
+
+        ],
+      ),
+      onTap: onTap,
+    ),
+  );
+  // video news article list item end
+
+  // post news article list item start
+  Widget postNewsItem(article, onTap) => 
   Card(
     child: InkWell(
       child: Container(
@@ -168,13 +245,18 @@ class _MyHomePageState extends State<MyHomePage> {
           children: <Widget>[
 
             // article image start
-            articles[index]['news_image'] == null?
-            Container() :
             ClipRRect(
               borderRadius: BorderRadius.circular(10),
-              child: Image.network(
-                imageLink + articles[index]['news_image'] ,
-                loadingBuilder: (context, child, progress) => 
+              child: Container(
+                height: 100,
+                width: 100,
+                padding: EdgeInsets.all(2),
+                color: Color(0xFFEAF0F1),
+                child: article['news_image'] == null?
+                Container() :
+                Image.network(
+                  imageLink + article['news_image'] ,
+                  loadingBuilder: (context, child, progress) => 
                   progress == null? 
                   child : 
                   Container(
@@ -183,9 +265,10 @@ class _MyHomePageState extends State<MyHomePage> {
                     padding: EdgeInsets.all(40),
                     child: CircularProgressIndicator()
                   ),
-                height: 100,
-                width: 100,
-                fit: BoxFit.cover,
+                  height: 100,
+                  width: 100,
+                  fit: BoxFit.cover,
+                ),
               ),
             ),
             // article image end  
@@ -205,10 +288,10 @@ class _MyHomePageState extends State<MyHomePage> {
                       flex: 1,
                       child: Container(
                         child: Text(
-                          articles[index]['news_title'],
+                          article['news_title'],
                           softWrap: true,
                           style: TextStyle(
-                            fontSize: 14,
+                            fontSize: 15,
                             fontWeight: FontWeight.bold,
                           ),
                         ),
@@ -216,7 +299,7 @@ class _MyHomePageState extends State<MyHomePage> {
                     ),
 
                     Text(
-                      articles[index]['news_date'],
+                      article['news_date'],
                       style: TextStyle(
                         fontSize: 12,
                         color: Theme.of(context).textSelectionHandleColor,
@@ -232,10 +315,10 @@ class _MyHomePageState extends State<MyHomePage> {
           ],
         ),
       ),
-      onTap: () => this.openFullArticle(index),
+      onTap: onTap,
     ),
   );
-  // article list item end
+  // post news article list item end
 
   // categorys list item start
   Widget category(int index) =>
@@ -305,7 +388,10 @@ class _MyHomePageState extends State<MyHomePage> {
       ? this._loadingPage(getHeadlines)
       : ListView.builder(
         itemCount: articles.length,
-        itemBuilder: (BuildContext context, int index) => article(index),
+        itemBuilder: (BuildContext context, int index) => postNewsItem(
+          articles[index],
+          () => openFullArticle(index)
+        ),
       );
 
       case 1: return categorys == null
@@ -330,6 +416,16 @@ class _MyHomePageState extends State<MyHomePage> {
           )
         ],
       );
+
+      case 2: return videoNewsList == null
+      ? this._loadingPage(getHeadlines)
+      : ListView.builder(
+        itemCount: videoNewsList.length,
+        itemBuilder: (BuildContext context, int index) => videoNewsItem(
+          videoNewsList[index],
+          () => this.openVideoNewsDetails(videoNewsList[index])
+        ),
+      );
     }
   }
   // app body pages end
@@ -345,6 +441,10 @@ class _MyHomePageState extends State<MyHomePage> {
       BottomNavigationBarItem(
         icon: Icon(Icons.category),
         title: Text('Category'),
+      ),
+      BottomNavigationBarItem(
+        icon: Icon(Icons.live_tv),
+        title: Text('Video News'),
       ),
     ],
     onTap: _onItemTapped,
